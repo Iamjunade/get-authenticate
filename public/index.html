@@ -23,8 +23,8 @@
       left: 0;
       right: 0;
       height: 3px;
-      background: linear-gradient(90deg, transparent, #06b6d4, #3b82f6, #06b6d4, transparent);
-      box-shadow: 0 0 15px #06b6d4, 0 0 30px #3b82f6;
+      background: linear-gradient(90deg, transparent, #06b6d4, #10b981, #06b6d4, transparent);
+      box-shadow: 0 0 15px #06b6d4, 0 0 30px #10b981;
       animation: scanline 2.2s linear infinite;
     }
     .glow-cyan {
@@ -33,9 +33,119 @@
     .glow-green {
       box-shadow: 0 0 35px rgba(16, 185, 129, 0.4);
     }
+    .glow-emerald-huge {
+      box-shadow: 0 0 80px rgba(16, 185, 129, 0.65), inset 0 0 40px rgba(16, 185, 129, 0.3);
+    }
+    .cctv-vignette {
+      box-shadow: inset 0 0 80px rgba(0, 0, 0, 0.9);
+    }
+    .cctv-scanlines {
+      background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.03), rgba(0, 255, 0, 0.01), rgba(0, 0, 255, 0.03));
+      background-size: 100% 3px, 6px 100%;
+    }
+    @keyframes pulseRing {
+      0% { transform: scale(0.9); opacity: 0.8; }
+      50% { transform: scale(1.05); opacity: 1; }
+      100% { transform: scale(0.9); opacity: 0.8; }
+    }
+    .animate-pulse-ring {
+      animation: pulseRing 3s ease-in-out infinite;
+    }
   </style>
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen font-sans antialiased selection:bg-cyan-500 selection:text-white">
+
+  <!-- 2027 FULL-SCREEN CINEMATIC BIOMETRIC AUTHENTICATION & COUNTDOWN OVERLAY -->
+  <div id="fullScreenAuthModal" class="hidden fixed inset-0 z-50 overflow-hidden flex flex-col items-center justify-center bg-slate-950/95 backdrop-blur-2xl transition-all duration-300">
+    <!-- Cyberpunk ambient matrix grid & laser sweep -->
+    <div class="absolute inset-0 bg-[radial-gradient(#06b6d4_1px,transparent_1px)] [background-size:28px_28px] opacity-25 pointer-events-none"></div>
+    <div class="absolute inset-0 bg-gradient-to-b from-slate-950/90 via-transparent to-slate-950/90 pointer-events-none"></div>
+    <div class="cctv-scanlines absolute inset-0 pointer-events-none opacity-40"></div>
+
+    <!-- Top Surveillance Status Bar -->
+    <div class="absolute top-6 inset-x-8 flex items-center justify-between z-10 border-b border-cyan-500/30 pb-3">
+      <div class="flex items-center space-x-3">
+        <div class="w-3 h-3 rounded-full bg-emerald-400 animate-ping"></div>
+        <div>
+          <span class="text-xs font-mono font-bold tracking-widest text-emerald-400 uppercase">/// QUANTUMCORE HIGH-SECURITY ACCESS TERMINAL ///</span>
+          <p class="text-[10px] font-mono text-slate-400">CLASSIFIED SURVEILLANCE & BIOMETRIC GATEWAY • SECTOR-04-ALPHA</p>
+        </div>
+      </div>
+      <div class="flex items-center space-x-4">
+        <span class="text-xs font-mono text-cyan-400 bg-cyan-950/80 border border-cyan-800/80 px-3 py-1 rounded-full uppercase tracking-wider hidden sm:inline-block">
+          ENCRYPTED SESSION // ZERO-IMAGE AES-512GCM
+        </span>
+        <span id="fsLiveClock" class="text-xs font-mono text-slate-300 font-bold">2027.10.22 // 14:35:12.482 UTC</span>
+      </div>
+    </div>
+
+    <!-- Center Holographic Reactor & Countdown Core -->
+    <div class="relative flex flex-col items-center justify-center z-10 max-w-2xl px-6 text-center">
+      
+      <!-- Massive Concentric Rotating HUD Rings -->
+      <div class="relative w-80 h-80 sm:w-96 sm:h-96 flex items-center justify-center mb-6">
+        <!-- Outer Rotating Dashed Ring -->
+        <svg class="absolute inset-0 w-full h-full animate-[spin_20s_linear_infinite]" viewBox="0 0 100 100">
+          <circle cx="50" cy="50" r="47" fill="none" stroke="#06b6d4" stroke-width="0.8" stroke-dasharray="4 6" opacity="0.6"/>
+          <circle cx="50" cy="50" r="44" fill="none" stroke="#10b981" stroke-width="0.5" stroke-dasharray="1 5" opacity="0.5"/>
+        </svg>
+        <!-- Mid Counter-Rotating Azimuth Ring with Ticks -->
+        <svg class="absolute inset-0 w-full h-full animate-[spin_12s_linear_infinite_reverse]" viewBox="0 0 100 100">
+          <circle cx="50" cy="50" r="39" fill="none" stroke="#22d3ee" stroke-width="1.2" stroke-dasharray="18 12 6 12" opacity="0.8"/>
+        </svg>
+        <!-- Inner Glowing Core Ring -->
+        <div class="relative w-56 h-56 sm:w-64 sm:h-64 rounded-full border-2 border-emerald-400/80 bg-emerald-950/50 glow-emerald-huge flex items-center justify-center backdrop-blur-md">
+          
+          <!-- PHASE 1 DISPLAY: Biometric Shield & Verified Banner -->
+          <div id="fsPhase1" class="flex flex-col items-center justify-center transition-all duration-300">
+            <div class="w-16 h-16 rounded-2xl bg-gradient-to-tr from-emerald-500 to-teal-400 flex items-center justify-center shadow-2xl shadow-emerald-500/50 mb-2 animate-bounce" style="animation-duration: 2s;">
+              <i data-lucide="shield-check" class="w-10 h-10 text-slate-950"></i>
+            </div>
+            <span class="text-xs font-mono font-bold text-emerald-400 uppercase tracking-widest">BIOMETRIC 3D MESH</span>
+            <span class="text-[10px] font-mono text-cyan-300">468 NODES MATCHED</span>
+          </div>
+
+          <!-- PHASE 2 DISPLAY: Colossal Full-Screen Countdown Digit -->
+          <div id="fsPhase2" class="hidden flex flex-col items-center justify-center transition-all duration-300">
+            <span id="fsCountdownDigit" class="text-8xl sm:text-9xl font-black font-mono text-emerald-300 drop-shadow-[0_0_60px_rgba(52,211,153,1)] transition-transform duration-200">
+              3
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Status Typography -->
+      <div class="space-y-3">
+        <div class="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-emerald-950/80 border border-emerald-500/60 text-emerald-400 text-xs font-mono font-bold uppercase tracking-widest shadow-[0_0_20px_rgba(16,185,129,0.4)]">
+          <i data-lucide="lock" class="w-3.5 h-3.5"></i>
+          <span id="fsClearanceBadge">CLEARANCE LEVEL 5 // TOP SECRET</span>
+        </div>
+
+        <h1 id="fsHeadline" class="text-3xl sm:text-5xl font-black tracking-tight text-white uppercase drop-shadow-[0_0_30px_rgba(255,255,255,0.4)]">
+          ACCESS GRANTED
+        </h1>
+        
+        <p id="fsSubheadline" class="text-sm sm:text-base font-mono text-emerald-300 tracking-wider">
+          Welcome, <span id="fsOperatorName" class="text-white font-bold underline decoration-emerald-400">Alex Mercer</span>
+        </p>
+
+        <!-- Live Agent EVA Dialogue Hologram Box -->
+        <div class="mt-4 bg-slate-900/90 border border-cyan-500/50 rounded-2xl px-5 py-3 shadow-2xl max-w-xl mx-auto flex items-center space-x-3.5">
+          <div class="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-ping flex-shrink-0"></div>
+          <p id="fsDialogueText" class="text-xs sm:text-sm font-mono text-slate-200 text-left">
+            "Access granted! Welcome, Alex Mercer. Your biometric credentials and security clearance have been verified."
+          </p>
+        </div>
+
+        <!-- Real-Time Decryption Hex Stream -->
+        <div class="pt-3 font-mono text-[11px] text-slate-500 flex items-center justify-center space-x-3">
+          <span id="fsDecryptionLog" class="text-cyan-400/80 animate-pulse">[0x8F94... SHA3-512 BIOMETRIC HASH VERIFIED]</span>
+          <span>•</span>
+          <span class="text-emerald-400 font-bold">QUANTUM-CORE ONLINE</span>
+        </div>
+      </div>
+    </div>
+  </div>
 
   <!-- Top Navigation Bar -->
   <header class="border-b border-slate-800/80 bg-slate-900/60 backdrop-blur-md sticky top-0 z-50">
@@ -162,64 +272,83 @@
       <!-- Main Interactive Grid -->
       <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
 
-        <!-- Left / Camera Feed Section (Cols 7) -->
+        <!-- Left / Security Camera Feed Section (Cols 7) -->
         <div class="lg:col-span-7 space-y-4">
-          <div class="relative bg-slate-900 border border-slate-800 rounded-3xl p-3 shadow-2xl glow-cyan overflow-hidden">
-            <!-- Camera & Canvas Wrapper -->
-            <div class="relative w-full aspect-[4/3] bg-black rounded-2xl overflow-hidden flex items-center justify-center">
+          <div class="relative bg-slate-900 border-2 border-slate-800 rounded-3xl p-3 shadow-2xl glow-cyan overflow-hidden">
+            <!-- Camera & Canvas Wrapper with 2027 Optical Recon OSD -->
+            <div class="relative w-full aspect-[4/3] bg-black rounded-2xl overflow-hidden flex items-center justify-center cctv-vignette">
               <video id="webcam" autoplay playsinline muted class="absolute inset-0 w-full h-full object-cover transform -scale-x-100"></video>
-              <canvas id="overlayCanvas" class="absolute inset-0 w-full h-full object-cover transform -scale-x-100 pointer-events-none"></canvas>
+              <canvas id="overlayCanvas" class="absolute inset-0 w-full h-full object-cover transform -scale-x-100 pointer-events-none z-10"></canvas>
 
               <!-- Animated Scanline effect when actively scanning -->
-              <div id="scanline" class="animate-scanline hidden"></div>
+              <div id="scanline" class="animate-scanline hidden z-10"></div>
+              <div class="cctv-scanlines absolute inset-0 pointer-events-none opacity-20 z-10"></div>
 
-              <!-- HUD Target Face Oval -->
-              <div id="hudGuide" class="absolute inset-0 flex items-center justify-center pointer-events-none">
-                <div class="w-64 h-80 rounded-[50%] border-2 border-dashed border-cyan-400/60 flex items-center justify-center transition-colors duration-300">
-                  <div class="w-56 h-72 rounded-[50%] border border-cyan-500/30"></div>
+              <!-- Tactical 4-Corner Viewfinder Reticles -->
+              <div class="absolute top-4 left-4 w-6 h-6 border-t-2 border-l-2 border-cyan-400 pointer-events-none z-20"></div>
+              <div class="absolute top-4 right-4 w-6 h-6 border-t-2 border-r-2 border-cyan-400 pointer-events-none z-20"></div>
+              <div class="absolute bottom-4 left-4 w-6 h-6 border-b-2 border-l-2 border-cyan-400 pointer-events-none z-20"></div>
+              <div class="absolute bottom-4 right-4 w-6 h-6 border-b-2 border-r-2 border-cyan-400 pointer-events-none z-20"></div>
+
+              <!-- 2027 Security Camera Top OSD Strip -->
+              <div class="absolute top-3 inset-x-5 flex items-center justify-between text-[11px] font-mono z-20 pointer-events-none">
+                <div class="flex items-center space-x-2">
+                  <span class="inline-flex items-center space-x-1.5 px-2.5 py-0.5 rounded-full bg-black/75 border border-rose-500/70 text-rose-400 font-bold backdrop-blur-md">
+                    <span class="w-2 h-2 rounded-full bg-rose-500 animate-ping"></span>
+                    <span>REC ●</span>
+                  </span>
+                  <span class="px-2 py-0.5 rounded bg-black/70 border border-cyan-500/40 text-cyan-300 backdrop-blur-md">
+                    CAM-04 [TERMINAL-ALPHA]
+                  </span>
+                  <span class="hidden sm:inline px-2 py-0.5 rounded bg-black/70 border border-slate-700 text-slate-300 backdrop-blur-md">
+                    60FPS // 4K-OPTICAL
+                  </span>
+                </div>
+                <div class="flex items-center space-x-2">
+                  <span id="cctvTimestamp" class="px-2.5 py-0.5 rounded bg-black/80 border border-slate-700 text-slate-200 backdrop-blur-md font-bold">
+                    2027.10.22 // 14:35:12.482 UTC
+                  </span>
                 </div>
               </div>
 
-              <!-- Real-time HUD Status Pill & Security Agent Voice Transcript Bar -->
-              <div class="absolute top-4 left-4 right-4 flex flex-col space-y-2 pointer-events-none">
-                <div class="flex justify-between items-center">
-                  <span id="detectionBadge" class="bg-slate-900/90 backdrop-blur-md border border-slate-700 text-slate-300 text-xs px-3 py-1.5 rounded-full font-mono flex items-center space-x-2 shadow-lg">
-                    <span class="w-2 h-2 rounded-full bg-amber-400" id="statusDot"></span>
-                    <span id="statusText">Initializing Camera & Models...</span>
-                  </span>
-                  <span class="bg-slate-900/90 backdrop-blur-md border border-slate-700 text-cyan-400 text-xs px-3 py-1.5 rounded-full font-mono">
-                    468 Face Mesh Points
-                  </span>
+              <!-- HUD Target Face Oval (Subtle Guide) -->
+              <div id="hudGuide" class="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+                <div class="w-64 h-80 rounded-[50%] border-2 border-dashed border-cyan-400/40 flex items-center justify-center transition-colors duration-300">
+                  <div class="w-56 h-72 rounded-[50%] border border-cyan-500/20"></div>
                 </div>
+              </div>
 
-                <!-- Live Agent EVA Speech Bubble -->
-                <div id="agentSpeechBubble" class="bg-slate-900/95 backdrop-blur-md border border-cyan-500/50 rounded-xl px-4 py-2 flex items-center space-x-3 shadow-xl transition-all duration-300 opacity-90">
+              <!-- Live Agent EVA Speech Bubble -->
+              <div class="absolute bottom-10 left-5 right-5 pointer-events-none z-20">
+                <div id="agentSpeechBubble" class="bg-slate-950/90 backdrop-blur-xl border border-cyan-500/50 rounded-xl px-4 py-2.5 flex items-center space-x-3 shadow-2xl transition-all duration-300">
                   <div class="flex items-center space-x-1.5 flex-shrink-0">
-                    <span class="w-2 h-2 rounded-full bg-cyan-400 animate-pulse"></span>
+                    <span class="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-pulse"></span>
                     <span class="text-[11px] font-mono font-bold text-cyan-400 uppercase tracking-wider">Agent EVA:</span>
                   </div>
                   <p id="agentSpeechText" class="text-xs text-slate-200 font-medium tracking-wide truncate">
-                    "Welcome. Please look straight into the camera for biometric scan."
+                    "Welcome. Please look straight into the security camera for biometric clearance."
                   </p>
                 </div>
               </div>
 
-              <!-- Verification / Match Toast & Thrilling Countdown inside Camera View -->
-              <div id="matchAlert" class="absolute bottom-4 inset-x-4 bg-slate-900/95 backdrop-blur-xl border-2 border-emerald-500/80 p-4 rounded-2xl text-center shadow-2xl transition-all duration-300 transform translate-y-8 opacity-0 pointer-events-none glow-green z-20">
-                <div class="flex items-center justify-center space-x-2 text-emerald-400 font-extrabold text-base mb-0.5">
-                  <i data-lucide="shield-check" class="w-5 h-5"></i>
-                  <span id="matchAlertTitle">ACCESS GRANTED</span>
-                </div>
-                <p id="matchAlertSub" class="text-xs text-slate-300 font-mono">Biometric Match Confirmed • Clearance Verified</p>
+              <!-- 2027 Security Camera Bottom Telemetry Strip -->
+              <div class="absolute bottom-2.5 inset-x-5 flex items-center justify-between text-[10px] font-mono text-slate-400 z-20 pointer-events-none">
+                <span class="px-2 py-0.5 rounded bg-black/70 border border-slate-800 text-cyan-300 flex items-center space-x-1.5 backdrop-blur-md">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                  <span>AI: 468-PT 3D MESH RECON • ZERO-IMAGE EMBEDDINGS</span>
+                </span>
+                <span class="px-2 py-0.5 rounded bg-black/70 border border-slate-800 text-slate-300 backdrop-blur-md hidden sm:inline">
+                  RESTRICTED // QUANTUM-SENTINEL
+                </span>
+              </div>
 
-                <!-- Thrilling Countdown Badge -->
-                <div id="countdownHud" class="hidden flex flex-col items-center justify-center mt-3">
-                  <div class="relative w-14 h-14 rounded-full border-4 border-emerald-400 flex items-center justify-center bg-emerald-950/70 shadow-[0_0_25px_rgba(52,211,153,0.8)]">
-                    <span id="countdownNumber" class="text-2xl font-black font-mono text-emerald-300 transition-all duration-200">3</span>
-                  </div>
-                  <span id="countdownLabel" class="text-[10px] font-mono uppercase tracking-widest text-emerald-400 mt-1 animate-pulse">
-                    Transferring to Terminal in 3s...
-                  </span>
+              <!-- Hidden in-camera match alert kept for backwards reference -->
+              <div id="matchAlert" class="hidden">
+                <span id="matchAlertTitle">ACCESS GRANTED</span>
+                <p id="matchAlertSub"></p>
+                <div id="countdownHud" class="hidden">
+                  <span id="countdownNumber">3</span>
+                  <span id="countdownLabel"></span>
                 </div>
               </div>
             </div>
@@ -227,12 +356,12 @@
             <!-- Camera Controls Bar -->
             <div class="mt-3 flex items-center justify-between px-2 text-xs text-slate-400 font-mono">
               <span class="flex items-center space-x-1.5">
-                <i data-lucide="camera" class="w-3.5 h-3.5 text-cyan-400"></i>
-                <span>WebRTC 720p@30FPS</span>
+                <i data-lucide="video" class="w-3.5 h-3.5 text-cyan-400"></i>
+                <span>Recon Stream: WebRTC 1080p@60FPS</span>
               </span>
               <span class="flex items-center space-x-1.5">
-                <i data-lucide="lock" class="w-3.5 h-3.5 text-emerald-400"></i>
-                <span>Zero-Image Storage (Vector Only)</span>
+                <i data-lucide="shield-check" class="w-3.5 h-3.5 text-emerald-400"></i>
+                <span>Quantum Biometric Engine v5.8</span>
               </span>
             </div>
           </div>
@@ -303,51 +432,80 @@
             </form>
           </div>
 
-          <!-- PANEL 2: Verification Action Panel -->
-          <div id="verifyPanel" class="hidden bg-slate-900/80 border border-slate-800 rounded-3xl p-6 shadow-xl space-y-5">
+          <!-- PANEL 2: 2027 Futuristic Biometric Security Console (Zero amateur confidence bars) -->
+          <div id="verifyPanel" class="hidden bg-slate-900/90 border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-5">
             <div>
               <div class="flex items-center space-x-2 text-emerald-400 mb-1">
-                <i data-lucide="scan" class="w-5 h-5"></i>
-                <h3 class="font-bold text-base tracking-wide text-white">Live Identity Authentication</h3>
+                <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-ping"></span>
+                <span class="text-[11px] font-mono font-bold tracking-widest uppercase text-emerald-400">SURVEILLANCE ACTIVE</span>
               </div>
-              <p class="text-xs text-slate-400 leading-relaxed">
-                Position your face inside the target frame. The system continuously runs cosine similarity matching against all pre-stored profiles.
+              <h3 class="font-extrabold text-lg tracking-wide text-white">Quantum Biometric Intercept</h3>
+              <p class="text-xs text-slate-400 leading-relaxed mt-1">
+                Real-time optical face acquisition. 468 spatial vectors are correlated continuously against encrypted database tokens.
               </p>
             </div>
 
-            <div class="bg-slate-950 border border-slate-800/80 rounded-2xl p-4 space-y-3">
-              <div class="flex justify-between items-center text-xs font-mono">
-                <span class="text-slate-400">Match Confidence Target:</span>
-                <span class="text-cyan-400 font-bold">&ge; 90.0%</span>
+            <!-- 2027 Sentinel Telemetry Matrix -->
+            <div class="grid grid-cols-2 gap-3 text-xs font-mono">
+              <div class="bg-slate-950/80 border border-slate-800/90 rounded-2xl p-3.5 space-y-1">
+                <span class="text-[10px] text-slate-500 uppercase tracking-wider block">Optical Sensor</span>
+                <span class="text-cyan-400 font-bold flex items-center space-x-1.5">
+                  <span class="w-1.5 h-1.5 rounded-full bg-cyan-400"></span>
+                  <span>CAM-04 (60Hz)</span>
+                </span>
               </div>
-              <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
-                <div id="liveConfidenceBar" class="bg-gradient-to-r from-cyan-500 to-emerald-400 h-full w-0 transition-all duration-150"></div>
+
+              <div class="bg-slate-950/80 border border-slate-800/90 rounded-2xl p-3.5 space-y-1">
+                <span class="text-[10px] text-slate-500 uppercase tracking-wider block">Biometric AI</span>
+                <span class="text-emerald-400 font-bold flex items-center space-x-1.5">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                  <span>468 3D Nodes</span>
+                </span>
               </div>
-              <div class="flex justify-between items-center text-xs font-mono">
-                <span class="text-slate-400">Live Match Score:</span>
-                <span id="liveConfidenceText" class="text-slate-300">0.0%</span>
+
+              <div class="bg-slate-950/80 border border-slate-800/90 rounded-2xl p-3.5 space-y-1">
+                <span class="text-[10px] text-slate-500 uppercase tracking-wider block">Encryption</span>
+                <span class="text-slate-200 font-bold">AES-512GCM</span>
+              </div>
+
+              <div class="bg-slate-950/80 border border-slate-800/90 rounded-2xl p-3.5 space-y-1">
+                <span class="text-[10px] text-slate-500 uppercase tracking-wider block">Liveness Scan</span>
+                <span class="text-emerald-400 font-bold">Stereo-Optical</span>
               </div>
             </div>
 
-            <div class="p-4 rounded-2xl border border-slate-800 bg-slate-950/60 space-y-2 text-xs font-mono">
-              <div class="flex justify-between">
-                <span class="text-slate-500">Closest Match:</span>
-                <span id="closestMatchName" class="text-slate-300 font-bold">Scanning...</span>
+            <!-- Radar / Frequency Signal Line -->
+            <div class="p-4 rounded-2xl bg-slate-950 border border-slate-800/80 flex items-center justify-between">
+              <div class="flex items-center space-x-3">
+                <div class="w-8 h-8 rounded-xl bg-cyan-950 border border-cyan-800 flex items-center justify-center text-cyan-400">
+                  <i data-lucide="activity" class="w-4 h-4"></i>
+                </div>
+                <div>
+                  <span class="text-xs font-mono text-slate-200 block font-semibold">1:N Correlation Stream</span>
+                  <span class="text-[10px] font-mono text-slate-500">Continuous biometric vector search</span>
+                </div>
               </div>
-              <div class="flex justify-between">
-                <span class="text-slate-500">Latency:</span>
-                <span id="liveLatency" class="text-emerald-400">-- ms</span>
-              </div>
-              <div class="flex justify-between">
-                <span class="text-slate-500">Liveness / Blink:</span>
-                <span id="liveLiveness" class="text-cyan-400">Active</span>
-              </div>
+              <span class="px-2 py-0.5 rounded text-[10px] font-mono bg-emerald-950 text-emerald-400 border border-emerald-800 animate-pulse">
+                SCANNING
+              </span>
             </div>
 
-            <button onclick="triggerManualVerification()" class="w-full bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-bold py-3 px-4 rounded-xl shadow-lg shadow-emerald-500/25 flex items-center justify-center space-x-2 transition">
-              <i data-lucide="fingerprint" class="w-4 h-4"></i>
-              <span>Instant Authenticate</span>
+            <!-- Tactical Authentication Trigger -->
+            <button onclick="triggerManualVerification()" class="w-full bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black py-3.5 px-4 rounded-2xl shadow-xl shadow-emerald-500/25 flex items-center justify-center space-x-2 transition transform active:scale-98 tracking-wider font-mono text-xs uppercase">
+              <i data-lucide="shield-check" class="w-4 h-4 text-slate-950"></i>
+              <span>Instant Verify Identity</span>
             </button>
+
+            <!-- Hidden compatibility elements to ensure no background loops break -->
+            <div class="hidden">
+              <div id="liveConfidenceBar" style="width: 0%"></div>
+              <span id="liveConfidenceText">0.0%</span>
+              <span id="closestMatchName">Scanning...</span>
+              <span id="liveLatency">-- ms</span>
+              <span id="liveLiveness">Active</span>
+              <span id="statusDot"></span>
+              <span id="statusText"></span>
+            </div>
           </div>
 
           <!-- Enrolled Identities Quick Drawer -->
@@ -1026,6 +1184,173 @@
       minTrackingConfidence: 0.5
     });
 
+    // 2027 Futuristic Face-on-Face HUD Renderer (Corner brackets, iris reticles, symmetry lines & 468 mesh nodes)
+    function draw2027BiometricHUD(ctx, landmarks, isAligned, yaw, noseRatio, width, height) {
+      if (!landmarks || landmarks.length < 468) return;
+
+      const primary = isAligned ? '#10b981' : '#f59e0b';
+      const glow = isAligned ? 'rgba(16, 185, 129, 0.85)' : 'rgba(245, 158, 11, 0.85)';
+      const dim = isAligned ? 'rgba(16, 185, 129, 0.35)' : 'rgba(245, 158, 11, 0.35)';
+
+      // 1. Calculate Bounding Box of Face
+      let minX = 1, maxX = 0, minY = 1, maxY = 0;
+      for (let i = 0; i < landmarks.length; i++) {
+        const l = landmarks[i];
+        if (l.x < minX) minX = l.x;
+        if (l.x > maxX) maxX = l.x;
+        if (l.y < minY) minY = l.y;
+        if (l.y > maxY) maxY = l.y;
+      }
+
+      const padX = (maxX - minX) * 0.12;
+      const padY = (maxY - minY) * 0.14;
+      const bx = Math.max(0, (minX - padX) * width);
+      const by = Math.max(0, (minY - padY) * height);
+      const bw = Math.min(width - bx, (maxX - minX + padX * 2) * width);
+      const bh = Math.min(height - by, (maxY - minY + padY * 2) * height);
+
+      // 2. Draw 4 Cyber Tactical Corner Brackets [ ]
+      const cLen = Math.min(30, bw * 0.22);
+      ctx.save();
+      ctx.strokeStyle = primary;
+      ctx.lineWidth = 2.5;
+      ctx.shadowColor = glow;
+      ctx.shadowBlur = 8;
+
+      // Top-Left
+      ctx.beginPath();
+      ctx.moveTo(bx, by + cLen);
+      ctx.lineTo(bx, by);
+      ctx.lineTo(bx + cLen, by);
+      ctx.stroke();
+
+      // Top-Right
+      ctx.beginPath();
+      ctx.moveTo(bx + bw - cLen, by);
+      ctx.lineTo(bx + bw, by);
+      ctx.lineTo(bx + bw, by + cLen);
+      ctx.stroke();
+
+      // Bottom-Left
+      ctx.beginPath();
+      ctx.moveTo(bx, by + bh - cLen);
+      ctx.lineTo(bx, by + bh);
+      ctx.lineTo(bx + cLen, by + bh);
+      ctx.stroke();
+
+      // Bottom-Right
+      ctx.beginPath();
+      ctx.moveTo(bx + bw - cLen, by + bh);
+      ctx.lineTo(bx + bw, by + bh);
+      ctx.lineTo(bx + bw, by + bh - cLen);
+      ctx.stroke();
+
+      // Side mid ticks
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(bx - 5, by + bh / 2); ctx.lineTo(bx + 5, by + bh / 2);
+      ctx.moveTo(bx + bw - 5, by + bh / 2); ctx.lineTo(bx + bw + 5, by + bh / 2);
+      ctx.stroke();
+      ctx.restore();
+
+      // 3. Dual Eye Iris Target Lock Reticles
+      const rot = (Date.now() * 0.003) % (Math.PI * 2);
+      const leftEyeX = (landmarks[468] ? landmarks[468].x : (landmarks[159].x + landmarks[145].x) * 0.5) * width;
+      const leftEyeY = (landmarks[468] ? landmarks[468].y : (landmarks[159].y + landmarks[145].y) * 0.5) * height;
+      const rightEyeX = (landmarks[473] ? landmarks[473].x : (landmarks[386].x + landmarks[374].x) * 0.5) * width;
+      const rightEyeY = (landmarks[473] ? landmarks[473].y : (landmarks[386].y + landmarks[374].y) * 0.5) * height;
+
+      drawIrisLockReticle(ctx, leftEyeX, leftEyeY, primary, glow, rot);
+      drawIrisLockReticle(ctx, rightEyeX, rightEyeY, primary, glow, -rot);
+
+      // 4. Central Symmetry Axis Line (Forehead -> Chin)
+      ctx.save();
+      ctx.strokeStyle = isAligned ? 'rgba(34, 211, 238, 0.6)' : 'rgba(245, 158, 11, 0.5)';
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash([4, 4]);
+      ctx.beginPath();
+      const symNodes = [10, 151, 9, 8, 1, 164, 152];
+      for (let i = 0; i < symNodes.length; i++) {
+        const pt = landmarks[symNodes[i]];
+        if (pt) {
+          if (i === 0) ctx.moveTo(pt.x * width, pt.y * height);
+          else ctx.lineTo(pt.x * width, pt.y * height);
+        }
+      }
+      ctx.stroke();
+      ctx.restore();
+
+      // 5. Forehead Triangulation & Facial Contour Lines
+      ctx.save();
+      ctx.strokeStyle = dim;
+      ctx.lineWidth = 1;
+      const triangulationPairs = [
+        [10, 338], [338, 297], [297, 10],
+        [10, 109], [109, 67], [67, 10],
+        [10, 151], [151, 9],
+        [234, 127], [127, 93], [93, 234],
+        [454, 356], [356, 323], [323, 454],
+        [1, 33], [1, 263]
+      ];
+      ctx.beginPath();
+      for (const [a, b] of triangulationPairs) {
+        if (landmarks[a] && landmarks[b]) {
+          ctx.moveTo(landmarks[a].x * width, landmarks[a].y * height);
+          ctx.lineTo(landmarks[b].x * width, landmarks[b].y * height);
+        }
+      }
+      ctx.stroke();
+      ctx.restore();
+
+      // 6. Glowing 468 3D Mesh Nodes
+      ctx.save();
+      ctx.fillStyle = primary;
+      ctx.shadowColor = glow;
+      ctx.shadowBlur = 4;
+      for (let i = 0; i < landmarks.length; i += 2) {
+        const pt = landmarks[i];
+        ctx.beginPath();
+        ctx.arc(pt.x * width, pt.y * height, 1.25, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    function drawIrisLockReticle(ctx, cx, cy, color, glow, rot) {
+      ctx.save();
+      ctx.shadowColor = glow;
+      ctx.shadowBlur = 6;
+      ctx.strokeStyle = color;
+      ctx.lineWidth = 1.5;
+
+      // Inner reticle circle
+      ctx.beginPath();
+      ctx.arc(cx, cy, 8, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Outer rotating targeting arc
+      ctx.beginPath();
+      ctx.arc(cx, cy, 15, rot, rot + Math.PI * 1.5);
+      ctx.stroke();
+
+      // 4 Crosshairs
+      const tLen = 5;
+      ctx.beginPath();
+      ctx.moveTo(cx - 15 - tLen, cy); ctx.lineTo(cx - 15, cy);
+      ctx.moveTo(cx + 15, cy); ctx.lineTo(cx + 15 + tLen, cy);
+      ctx.moveTo(cx, cy - 15 - tLen); ctx.lineTo(cx, cy - 15);
+      ctx.moveTo(cx, cy + 15); ctx.lineTo(cx, cy + 15 + tLen);
+      ctx.stroke();
+
+      // Center dot
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(cx, cy, 1.8, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.restore();
+    }
+
     faceMesh.onResults((results) => {
       canvasCtx.save();
       canvasCtx.clearRect(0, 0, canvasElement.width, canvasElement.height);
@@ -1091,17 +1416,16 @@
           if (hudGuide) hudGuide.firstElementChild.className = "w-64 h-80 rounded-[50%] border-2 border-emerald-400 flex items-center justify-center transition-colors duration-300 glow-green";
         }
 
-        // Draw 3D Face Mesh Wireframe Points
-        canvasCtx.fillStyle = (isHeadTurned || isHeadTilted || isOffCenter) 
-          ? '#f59e0b' 
-          : (currentMode === 'VERIFY' ? '#10b981' : '#06b6d4');
-
-        for (let i = 0; i < landmarks.length; i += 3) {
-          const pt = landmarks[i];
-          canvasCtx.beginPath();
-          canvasCtx.arc(pt.x * canvasElement.width, pt.y * canvasElement.height, 1.2, 0, 2 * Math.PI);
-          canvasCtx.fill();
-        }
+        // Draw 2027 Futuristic Face-on-Face Markings (Iris lock reticles, bounding brackets & mesh)
+        draw2027BiometricHUD(
+          canvasCtx, 
+          landmarks, 
+          !(isHeadTurned || isHeadTilted || isOffCenter), 
+          yaw, 
+          noseRatio, 
+          canvasElement.width, 
+          canvasElement.height
+        );
 
         // Update Status Badge
         const statusText = document.getElementById('statusText');
@@ -1296,9 +1620,8 @@
       }
     };
 
-    // Transition to the Beautiful Security Page with Thrilling Countdown & Voice
+    // Transition to the Beautiful Security Page with Full-Screen Holographic Countdown & Voice
     function triggerAuthenticationSuccess(user, score, latency) {
-      // Guard: Strictly prevent duplicate execution per session
       if (isCurrentlyAuthenticated) return;
       isCurrentlyAuthenticated = true;
       consecutiveMatches = 0;
@@ -1330,80 +1653,101 @@
       `;
       tbody.prepend(row);
 
-      // Show in-camera celebratory alert with match confirmation
-      const alertBox = document.getElementById('matchAlert');
-      const titleEl = document.getElementById('matchAlertTitle');
-      const subEl = document.getElementById('matchAlertSub');
-      const countdownHud = document.getElementById('countdownHud');
+      // OPEN 2027 FULL-SCREEN CINEMATIC AUTHENTICATION OVERLAY
+      const modal = document.getElementById('fullScreenAuthModal');
+      const fsOperatorName = document.getElementById('fsOperatorName');
+      const fsClearanceBadge = document.getElementById('fsClearanceBadge');
+      const fsHeadline = document.getElementById('fsHeadline');
+      const fsSubheadline = document.getElementById('fsSubheadline');
+      const fsDialogueText = document.getElementById('fsDialogueText');
+      const fsDecryptionLog = document.getElementById('fsDecryptionLog');
+      const fsPhase1 = document.getElementById('fsPhase1');
+      const fsPhase2 = document.getElementById('fsPhase2');
 
-      if (titleEl) titleEl.innerText = `IDENTITY VERIFIED: ${user.name.toUpperCase()}!`;
-      if (subEl) subEl.innerText = `Biometric Clearance: ${user.clearance} • Match ${(score * 100).toFixed(1)}%`;
-      if (countdownHud) countdownHud.classList.add('hidden');
-      alertBox.classList.remove('opacity-0', 'translate-y-8', 'pointer-events-none');
+      if (fsOperatorName) fsOperatorName.innerText = user.name;
+      if (fsClearanceBadge) fsClearanceBadge.innerText = `SECURITY CLEARANCE: ${user.clearance.toUpperCase()}`;
+      if (fsHeadline) fsHeadline.innerText = "ACCESS GRANTED";
+      if (fsSubheadline) fsSubheadline.innerHTML = `Welcome, <span class="text-white font-bold underline decoration-emerald-400">${user.name}</span>`;
+      if (fsDecryptionLog) fsDecryptionLog.innerText = `[0x${Math.random().toString(16).substring(2, 8).toUpperCase()}... SHA3-512 BIOMETRIC HASH VERIFIED]`;
+      
+      if (fsPhase1) fsPhase1.classList.remove('hidden');
+      if (fsPhase2) fsPhase2.classList.add('hidden');
+      if (modal) modal.classList.remove('hidden');
 
-      // Play victory chime
+      // Play victory access chord
       playSciFiChime('ACCESS_GRANTED');
 
-      // STEP 1: Agent EVA delivers full welcome address first without cutting off!
+      // STEP 1: Agent EVA delivers full welcome address first
       const welcomeSpeech = `Access granted! Welcome, ${user.name}. Your biometric credentials and security clearance have been verified. Welcome to the QuantumCore security terminal.`;
-      
+      if (fsDialogueText) fsDialogueText.innerText = `"${welcomeSpeech}"`;
+
       agentSpeak(welcomeSpeech, "WELCOME", true, () => {
-        // STEP 2: Welcome finished! Now run the thrilling 3-2-1 countdown
-        startThrillCountdown(user);
+        // STEP 2: Welcome finished! Now run the full-screen thrilling countdown
+        startFullScreenCountdown(user);
       });
     }
 
-    function startThrillCountdown(user) {
-      const countdownHud = document.getElementById('countdownHud');
-      const countdownNumber = document.getElementById('countdownNumber');
-      const countdownLabel = document.getElementById('countdownLabel');
-      const alertBox = document.getElementById('matchAlert');
+    function startFullScreenCountdown(user) {
+      const fsPhase1 = document.getElementById('fsPhase1');
+      const fsPhase2 = document.getElementById('fsPhase2');
+      const fsHeadline = document.getElementById('fsHeadline');
+      const fsSubheadline = document.getElementById('fsSubheadline');
+      const fsCountdownDigit = document.getElementById('fsCountdownDigit');
+      const fsDialogueText = document.getElementById('fsDialogueText');
+      const fsDecryptionLog = document.getElementById('fsDecryptionLog');
+      const modal = document.getElementById('fullScreenAuthModal');
 
-      if (countdownHud) countdownHud.classList.remove('hidden');
+      if (fsPhase1) fsPhase1.classList.add('hidden');
+      if (fsPhase2) fsPhase2.classList.remove('hidden');
+      if (fsHeadline) fsHeadline.innerText = "TRANSFERRING TO TERMINAL";
+      if (fsSubheadline) fsSubheadline.innerText = "ALLOCATING QUANTUM SECURITY DOMAIN";
 
-      // Part 2: Agent announces countdown
+      // Voice Part 2: Agent announces countdown
       const countdownSpeech = `OK ${user.name}, transferring you to the dashboard in three... two... one... System unlocked.`;
+      if (fsDialogueText) fsDialogueText.innerText = `"${countdownSpeech}"`;
       agentSpeak(countdownSpeech, "COUNTDOWN", false);
 
       let count = 3;
-      if (countdownNumber) {
-        countdownNumber.innerText = "3";
-        countdownNumber.className = "text-2xl font-black font-mono text-emerald-300 transition-all duration-200 scale-125";
-        setTimeout(() => { if (countdownNumber) countdownNumber.className = "text-2xl font-black font-mono text-emerald-300 transition-all duration-200 scale-100"; }, 250);
+      if (fsCountdownDigit) {
+        fsCountdownDigit.innerText = "3";
+        fsCountdownDigit.className = "text-8xl sm:text-9xl font-black font-mono text-emerald-300 drop-shadow-[0_0_60px_rgba(52,211,153,1)] transition-transform duration-200 scale-125";
+        setTimeout(() => { if (fsCountdownDigit) fsCountdownDigit.className = "text-8xl sm:text-9xl font-black font-mono text-emerald-300 drop-shadow-[0_0_60px_rgba(52,211,153,1)] transition-transform duration-200 scale-100"; }, 250);
       }
-      if (countdownLabel) countdownLabel.innerText = "TRANSFERRING IN 3 SECONDS...";
+      if (fsDecryptionLog) fsDecryptionLog.innerText = "[DECRYPTING MAINFRAME ENCLAVES 33%]";
       playSciFiChime('COUNTDOWN', 880);
 
       const timer = setInterval(() => {
         count--;
         if (count === 2) {
-          if (countdownNumber) {
-            countdownNumber.innerText = "2";
-            countdownNumber.className = "text-2xl font-black font-mono text-cyan-300 transition-all duration-200 scale-125";
-            setTimeout(() => { if (countdownNumber) countdownNumber.className = "text-2xl font-black font-mono text-cyan-300 transition-all duration-200 scale-100"; }, 250);
+          if (fsCountdownDigit) {
+            fsCountdownDigit.innerText = "2";
+            fsCountdownDigit.className = "text-8xl sm:text-9xl font-black font-mono text-cyan-300 drop-shadow-[0_0_60px_rgba(6,182,212,1)] transition-transform duration-200 scale-125";
+            setTimeout(() => { if (fsCountdownDigit) fsCountdownDigit.className = "text-8xl sm:text-9xl font-black font-mono text-cyan-300 drop-shadow-[0_0_60px_rgba(6,182,212,1)] transition-transform duration-200 scale-100"; }, 250);
           }
-          if (countdownLabel) countdownLabel.innerText = "TRANSFERRING IN 2 SECONDS...";
+          if (fsDecryptionLog) fsDecryptionLog.innerText = "[ALLOCATING QUANTUM DEFENSE TOKENS 66%]";
           playSciFiChime('COUNTDOWN', 1046);
         } else if (count === 1) {
-          if (countdownNumber) {
-            countdownNumber.innerText = "1";
-            countdownNumber.className = "text-2xl font-black font-mono text-amber-300 transition-all duration-200 scale-125";
-            setTimeout(() => { if (countdownNumber) countdownNumber.className = "text-2xl font-black font-mono text-amber-300 transition-all duration-200 scale-100"; }, 250);
+          if (fsCountdownDigit) {
+            fsCountdownDigit.innerText = "1";
+            fsCountdownDigit.className = "text-8xl sm:text-9xl font-black font-mono text-amber-300 drop-shadow-[0_0_60px_rgba(245,158,11,1)] transition-transform duration-200 scale-125";
+            setTimeout(() => { if (fsCountdownDigit) fsCountdownDigit.className = "text-8xl sm:text-9xl font-black font-mono text-amber-300 drop-shadow-[0_0_60px_rgba(245,158,11,1)] transition-transform duration-200 scale-100"; }, 250);
           }
-          if (countdownLabel) countdownLabel.innerText = "TRANSFERRING IN 1 SECOND...";
+          if (fsDecryptionLog) fsDecryptionLog.innerText = "[SECURITY GATEWAYS UNLOCKED 99%]";
           playSciFiChime('COUNTDOWN', 1318);
         } else if (count <= 0) {
           clearInterval(timer);
-          if (countdownNumber) {
-            countdownNumber.innerText = "✓";
-            countdownNumber.className = "text-2xl font-black font-mono text-emerald-400 scale-150 transition-all duration-300";
+          if (fsCountdownDigit) {
+            fsCountdownDigit.innerText = "✓";
+            fsCountdownDigit.className = "text-8xl sm:text-9xl font-black font-mono text-emerald-400 drop-shadow-[0_0_80px_rgba(16,185,129,1)] scale-150 transition-all duration-300";
           }
-          if (countdownLabel) countdownLabel.innerText = "TERMINAL UNLOCKED • ACCESS GRANTED";
+          if (fsHeadline) fsHeadline.innerText = "SYSTEM UNLOCKED";
+          if (fsSubheadline) fsSubheadline.innerText = "CLEARANCE ACTIVE // WELCOME OPERATOR";
+          if (fsDecryptionLog) fsDecryptionLog.innerText = "[SESSION SECURE // ACCESS AUTHORIZED]";
           playSciFiChime('ACCESS_GRANTED');
 
-          // Smooth transition after thrilling countdown finishes!
+          // Smooth cinematic transition after countdown completes
           setTimeout(() => {
-            alertBox.classList.add('opacity-0', 'translate-y-8', 'pointer-events-none');
+            if (modal) modal.classList.add('hidden');
             document.getElementById('authPortalView').classList.add('hidden');
             document.getElementById('securityPortalView').classList.remove('hidden');
             lucide.createIcons();
@@ -1416,18 +1760,38 @@
     window.lockAndReturn = function() {
       isCurrentlyAuthenticated = false;
       isWelcomeSpeaking = false;
-      const alertBox = document.getElementById('matchAlert');
-      if (alertBox) alertBox.classList.add('opacity-0', 'translate-y-8', 'pointer-events-none');
-      const hud = document.getElementById('countdownHud');
-      if (hud) hud.classList.add('hidden');
-      const countNum = document.getElementById('countdownNumber');
-      if (countNum) countNum.innerText = "3";
+      const modal = document.getElementById('fullScreenAuthModal');
+      if (modal) modal.classList.add('hidden');
+      const fsPhase1 = document.getElementById('fsPhase1');
+      if (fsPhase1) fsPhase1.classList.remove('hidden');
+      const fsPhase2 = document.getElementById('fsPhase2');
+      if (fsPhase2) fsPhase2.classList.add('hidden');
+
       document.getElementById('securityPortalView').classList.add('hidden');
       document.getElementById('authPortalView').classList.remove('hidden');
       switchMode('VERIFY');
       consecutiveMatches = 0;
       agentSpeak("Terminal locked. Biometric scanner reactivated.", "LOCK", true);
     };
+
+    // Live 2027 Millisecond CCTV Timestamp Updater
+    function updateCctvClocks() {
+      const now = new Date();
+      const yr = now.getFullYear();
+      const mo = String(now.getMonth() + 1).padStart(2, '0');
+      const da = String(now.getDate()).padStart(2, '0');
+      const hr = String(now.getUTCHours()).padStart(2, '0');
+      const mi = String(now.getUTCMinutes()).padStart(2, '0');
+      const se = String(now.getUTCSeconds()).padStart(2, '0');
+      const ms = String(now.getUTCMilliseconds()).padStart(3, '0');
+      const timeStr = `${yr}.${mo}.${da} // ${hr}:${mi}:${se}.${ms} UTC`;
+      
+      const cctvEl = document.getElementById('cctvTimestamp');
+      if (cctvEl) cctvEl.innerText = timeStr;
+      const fsClockEl = document.getElementById('fsLiveClock');
+      if (fsClockEl) fsClockEl.innerText = timeStr;
+    }
+    setInterval(updateCctvClocks, 65);
 
     // Initialize on window load
     window.addEventListener('DOMContentLoaded', () => {
