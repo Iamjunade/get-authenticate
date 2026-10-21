@@ -204,13 +204,23 @@
                 </div>
               </div>
 
-              <!-- Verification / Match Toast inside Camera View -->
-              <div id="matchAlert" class="absolute bottom-6 inset-x-6 bg-slate-900/95 backdrop-blur-lg border border-emerald-500/60 p-4 rounded-2xl text-center shadow-2xl transition-all duration-300 transform translate-y-8 opacity-0 pointer-events-none">
-                <div class="flex items-center justify-center space-x-2 text-emerald-400 font-bold text-base mb-1">
-                  <i data-lucide="check-circle" class="w-5 h-5"></i>
-                  <span id="matchAlertTitle">Identity Verified!</span>
+              <!-- Verification / Match Toast & Thrilling Countdown inside Camera View -->
+              <div id="matchAlert" class="absolute bottom-4 inset-x-4 bg-slate-900/95 backdrop-blur-xl border-2 border-emerald-500/80 p-4 rounded-2xl text-center shadow-2xl transition-all duration-300 transform translate-y-8 opacity-0 pointer-events-none glow-green z-20">
+                <div class="flex items-center justify-center space-x-2 text-emerald-400 font-extrabold text-base mb-0.5">
+                  <i data-lucide="shield-check" class="w-5 h-5"></i>
+                  <span id="matchAlertTitle">ACCESS GRANTED</span>
                 </div>
-                <p id="matchAlertSub" class="text-xs text-slate-300 font-mono">Redirecting to Secure Access Terminal...</p>
+                <p id="matchAlertSub" class="text-xs text-slate-300 font-mono">Biometric Match Confirmed • Clearance Verified</p>
+
+                <!-- Thrilling Countdown Badge -->
+                <div id="countdownHud" class="hidden flex flex-col items-center justify-center mt-3">
+                  <div class="relative w-14 h-14 rounded-full border-4 border-emerald-400 flex items-center justify-center bg-emerald-950/70 shadow-[0_0_25px_rgba(52,211,153,0.8)]">
+                    <span id="countdownNumber" class="text-2xl font-black font-mono text-emerald-300 transition-all duration-200">3</span>
+                  </div>
+                  <span id="countdownLabel" class="text-[10px] font-mono uppercase tracking-widest text-emerald-400 mt-1 animate-pulse">
+                    Transferring to Terminal in 3s...
+                  </span>
+                </div>
               </div>
             </div>
 
@@ -564,9 +574,9 @@
     let isWelcomeSpeaking = false;
 
     // Play a crisp high-tech sci-fi scanner chime
-    function playSciFiChime(type = 'COMMAND') {
-      // Never beep continuously if already authenticated
-      if (isCurrentlyAuthenticated && type !== 'ACCESS_GRANTED') {
+    function playSciFiChime(type = 'COMMAND', customFreq = null) {
+      // Never beep continuously if already authenticated (except during countdown or access granted)
+      if (isCurrentlyAuthenticated && type !== 'ACCESS_GRANTED' && type !== 'COUNTDOWN') {
         return;
       }
       try {
@@ -587,19 +597,29 @@
           osc.type = 'sine';
           osc.frequency.setValueAtTime(523.25, now);
           osc.frequency.exponentialRampToValueAtTime(783.99, now + 0.18);
-          gain.gain.setValueAtTime(0.18, now);
-          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.45);
+          gain.gain.setValueAtTime(0.25, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
           osc.start(now);
-          osc.stop(now + 0.45);
-        } else {
-          // Futuristic single blip
-          osc.type = 'triangle';
-          osc.frequency.setValueAtTime(660, now);
-          osc.frequency.exponentialRampToValueAtTime(880, now + 0.1);
-          gain.gain.setValueAtTime(0.12, now);
+          osc.stop(now + 0.5);
+        } else if (type === 'COUNTDOWN') {
+          // Crisp high-tech countdown pulse
+          osc.type = 'sine';
+          const baseFreq = customFreq || 950;
+          osc.frequency.setValueAtTime(baseFreq, now);
+          osc.frequency.exponentialRampToValueAtTime(baseFreq * 1.25, now + 0.12);
+          gain.gain.setValueAtTime(0.28, now);
           gain.gain.exponentialRampToValueAtTime(0.001, now + 0.25);
           osc.start(now);
           osc.stop(now + 0.25);
+        } else {
+          // Futuristic single guidance blip
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(660, now);
+          osc.frequency.exponentialRampToValueAtTime(880, now + 0.08);
+          gain.gain.setValueAtTime(0.12, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+          osc.start(now);
+          osc.stop(now + 0.2);
         }
       } catch (e) {
         // AudioContext fallback
@@ -650,6 +670,8 @@
       if (speechSynth.onvoiceschanged !== undefined) {
         speechSynth.onvoiceschanged = pickFemaleVoice;
       }
+      setTimeout(pickFemaleVoice, 300);
+      setTimeout(pickFemaleVoice, 1200);
     }
 
     window.changeVoiceSelection = function(voiceName) {
@@ -661,15 +683,24 @@
       }
     };
 
-    // Agent EVA Voice Speak Function with SpeechSynthesis recovery
-    function agentSpeak(text, reason = '', isUrgent = false) {
+    // Global reference prevents Chrome V8 garbage collection dropping active utterance
+    window._evaUtterance = null;
+
+    // Agent EVA Voice Speak Function with Complete Callback and GC Shield
+    function agentSpeak(text, reason = '', isUrgent = false, onComplete = null) {
       if (!voiceEnabled || !speechSynth) {
         updateVisualSubtitles(text);
+        if (typeof onComplete === 'function') setTimeout(onComplete, 2000);
         return;
       }
 
       // If welcome message is playing, never interrupt it!
-      if (isWelcomeSpeaking && reason !== 'WELCOME') {
+      if (isWelcomeSpeaking && reason !== 'WELCOME' && reason !== 'COUNTDOWN') {
+        return;
+      }
+
+      // If authenticated, disallow routine guidance beeps or commands
+      if (isCurrentlyAuthenticated && reason !== 'WELCOME' && reason !== 'COUNTDOWN' && reason !== 'LOCK') {
         return;
       }
 
@@ -693,77 +724,93 @@
       updateVisualSubtitles(text);
 
       // Web Audio chime
-      playSciFiChime(reason === 'WELCOME' ? 'ACCESS_GRANTED' : 'COMMAND');
+      playSciFiChime(reason === 'WELCOME' ? 'ACCESS_GRANTED' : (reason === 'COUNTDOWN' ? 'COUNTDOWN' : 'COMMAND'));
 
       // Crucial: Chromium requires resume() when speech synth gets suspended
       if (speechSynth.paused) {
-        speechSynth.resume();
+        try { speechSynth.resume(); } catch(e) {}
       }
 
-      if (isUrgent) {
-        speechSynth.cancel();
-      }
+      const doSpeak = () => {
+        try {
+          const utterance = new SpeechSynthesisUtterance(text);
+          window._evaUtterance = utterance; // Retain globally to prevent Chrome GC
 
-      const utterance = new SpeechSynthesisUtterance(text);
-      if (selectedFemaleVoice) {
-        utterance.voice = selectedFemaleVoice;
-      } else {
-        // Fallback pick
-        const voices = speechSynth.getVoices();
-        utterance.voice = voices.find(v => v.lang.startsWith('en')) || voices[0];
-      }
-      utterance.pitch = 1.15;
-      utterance.rate = 1.0;
-      utterance.volume = 1.0;
+          if (selectedFemaleVoice) {
+            utterance.voice = selectedFemaleVoice;
+          } else {
+            const voices = speechSynth.getVoices();
+            utterance.voice = voices.find(v => v.lang.startsWith('en')) || voices[0];
+          }
+          utterance.pitch = 1.15;
+          utterance.rate = 1.0;
+          utterance.volume = 1.0;
 
-      const speechPulse = document.getElementById('agentVoicePulse');
-      const speechBubble = document.getElementById('agentSpeechBubble');
-      const equalizerWave = document.getElementById('equalizerWave');
-      const agentStatusBadge = document.getElementById('agentStatusBadge');
+          const speechPulse = document.getElementById('agentVoicePulse');
+          const speechBubble = document.getElementById('agentSpeechBubble');
+          const equalizerWave = document.getElementById('equalizerWave');
+          const agentStatusBadge = document.getElementById('agentStatusBadge');
 
-      utterance.onstart = () => {
-        if (speechPulse) speechPulse.classList.add('animate-ping');
-        if (equalizerWave) equalizerWave.classList.remove('hidden');
-        if (agentStatusBadge) {
-          agentStatusBadge.innerText = "SPEAKING";
-          agentStatusBadge.className = "text-[9px] font-mono px-1.5 py-0.2 rounded bg-cyan-950 text-cyan-400 border border-cyan-700 animate-pulse";
-        }
-        if (speechBubble) {
-          speechBubble.classList.add('border-cyan-400', 'glow-cyan');
-          speechBubble.classList.remove('border-cyan-500/50');
-        }
-      };
+          let hasCompleted = false;
+          const finishExecution = () => {
+            if (hasCompleted) return;
+            hasCompleted = true;
+            if (reason === 'WELCOME') {
+              isWelcomeSpeaking = false;
+            }
+            if (speechPulse) speechPulse.classList.remove('animate-ping');
+            if (equalizerWave) equalizerWave.classList.add('hidden');
+            if (agentStatusBadge) {
+              agentStatusBadge.innerText = "ACTIVE";
+              agentStatusBadge.className = "text-[9px] font-mono px-1.5 py-0.2 rounded bg-emerald-950 text-emerald-400 border border-emerald-800";
+            }
+            if (speechBubble) {
+              speechBubble.classList.remove('border-cyan-400', 'glow-cyan');
+              speechBubble.classList.add('border-cyan-500/50');
+            }
+            if (typeof onComplete === 'function') {
+              try { onComplete(); } catch (err) { console.error(err); }
+            }
+          };
 
-      utterance.onend = () => {
-        if (reason === 'WELCOME') {
-          isWelcomeSpeaking = false;
-        }
-        if (speechPulse) speechPulse.classList.remove('animate-ping');
-        if (equalizerWave) equalizerWave.classList.add('hidden');
-        if (agentStatusBadge) {
-          agentStatusBadge.innerText = "ACTIVE";
-          agentStatusBadge.className = "text-[9px] font-mono px-1.5 py-0.2 rounded bg-emerald-950 text-emerald-400 border border-emerald-800";
-        }
-        if (speechBubble) {
-          speechBubble.classList.remove('border-cyan-400', 'glow-cyan');
-          speechBubble.classList.add('border-cyan-500/50');
-        }
-      };
+          utterance.onstart = () => {
+            if (speechPulse) speechPulse.classList.add('animate-ping');
+            if (equalizerWave) equalizerWave.classList.remove('hidden');
+            if (agentStatusBadge) {
+              agentStatusBadge.innerText = "SPEAKING";
+              agentStatusBadge.className = "text-[9px] font-mono px-1.5 py-0.2 rounded bg-cyan-950 text-cyan-400 border border-cyan-700 animate-pulse";
+            }
+            if (speechBubble) {
+              speechBubble.classList.add('border-cyan-400', 'glow-cyan');
+              speechBubble.classList.remove('border-cyan-500/50');
+            }
+          };
 
-      utterance.onerror = (e) => {
-        console.warn("SpeechSynthesis error:", e);
-        if (reason === 'WELCOME') isWelcomeSpeaking = false;
-        if (speechSynth.paused) speechSynth.resume();
-      };
+          utterance.onend = finishExecution;
+          utterance.onerror = (e) => {
+            console.warn("SpeechSynthesis error:", e);
+            if (speechSynth.paused) speechSynth.resume();
+            finishExecution();
+          };
 
-      // Slight 40ms delay if cancel was called to avoid Chrome speech engine dropping utterance
-      if (isUrgent) {
-        setTimeout(() => {
-          speechSynth.resume();
+          // Safe fallback timer in case speech engine onend event stalls
+          const safeTimeoutMs = Math.max(3000, text.length * 85);
+          setTimeout(() => {
+            if (!hasCompleted) finishExecution();
+          }, safeTimeoutMs);
+
           speechSynth.speak(utterance);
-        }, 50);
+        } catch (err) {
+          console.error("speechSynth.speak failed:", err);
+          if (typeof onComplete === 'function') onComplete();
+        }
+      };
+
+      if (isUrgent && speechSynth.speaking) {
+        speechSynth.cancel();
+        setTimeout(doSpeak, 120);
       } else {
-        speechSynth.speak(utterance);
+        doSpeak();
       }
     }
 
@@ -774,18 +821,42 @@
       if (hologramTextEl) hologramTextEl.innerText = `"${text}"`;
     }
 
+    // Comprehensive Audio & Speech Engine Unlocker for strict browser autoplay policies
+    function unlockAudioEngine() {
+      if (speechSynth && speechSynth.paused) {
+        try { speechSynth.resume(); } catch (e) {}
+      }
+      if (!audioCtx) {
+        try {
+          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        } catch (e) {}
+      }
+      if (audioCtx && audioCtx.state === 'suspended') {
+        try { audioCtx.resume(); } catch (e) {}
+      }
+    }
+
+    // Attach unlock listeners to ANY user touch/click/keypress anywhere on page
+    ['click', 'touchstart', 'pointerdown', 'keydown'].forEach(evt => {
+      window.addEventListener(evt, unlockAudioEngine, { passive: true });
+    });
+
     // Prominent "Click to Activate & Test Voice" Button
     window.activateAndTestAgentVoice = function() {
-      if (speechSynth.paused) {
-        speechSynth.resume();
-      }
+      unlockAudioEngine();
       voiceEnabled = true;
-      document.getElementById('toggleVoiceBtn').innerText = "🔊 ON";
-      document.getElementById('activateVoiceBtnText').innerText = "Voice Active ✓";
+      const toggleBtn = document.getElementById('toggleVoiceBtn');
+      if (toggleBtn) {
+        toggleBtn.innerText = "🔊 ON";
+        toggleBtn.className = "text-xs font-mono px-2 py-0.5 rounded bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition";
+      }
+      const testBtnText = document.getElementById('activateVoiceBtnText');
+      if (testBtnText) testBtnText.innerText = "EVA Online ✓";
       agentSpeak("Security Agent EVA online. Biometric scanner activated. Keep your face straight and look directly at the camera.", "TEST", true);
     };
 
     window.toggleVoiceMute = function() {
+      unlockAudioEngine();
       voiceEnabled = !voiceEnabled;
       const btn = document.getElementById('toggleVoiceBtn');
       if (voiceEnabled) {
@@ -799,18 +870,6 @@
         updateVisualSubtitles("Voice muted. Visual subtitles remain active.");
       }
     };
-
-    // Unlock browser audio context on any user click
-    document.addEventListener('click', () => {
-      if (speechSynth && speechSynth.paused) {
-        speechSynth.resume();
-      }
-      if (!audioCtx) {
-        try {
-          audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        } catch (e) {}
-      }
-    }, { once: true });
 
     // Initialize Lucide icons
     lucide.createIcons();
@@ -887,6 +946,7 @@
 
     // Switch between Register & Verify tabs
     window.switchMode = function(mode) {
+      unlockAudioEngine();
       currentMode = mode;
       const tabReg = document.getElementById('tabRegisterBtn');
       const tabVer = document.getElementById('tabVerifyBtn');
@@ -1106,6 +1166,7 @@
 
     // ENROLLMENT / PRE-STORING FUNCTIONALITY
     window.enrollCurrentFace = function() {
+      unlockAudioEngine();
       if (!currentLiveLandmarks) {
         alert("Please ensure your face is clearly visible in the camera.");
         return;
@@ -1209,6 +1270,7 @@
 
     // Manual instant authentication trigger button
     window.triggerManualVerification = function() {
+      unlockAudioEngine();
       if (!currentLiveLandmarks) {
         alert("Please face the camera to authenticate.");
         return;
@@ -1234,23 +1296,14 @@
       }
     };
 
-    // Transition to the Beautiful Security Page
+    // Transition to the Beautiful Security Page with Thrilling Countdown & Voice
     function triggerAuthenticationSuccess(user, score, latency) {
       // Guard: Strictly prevent duplicate execution per session
       if (isCurrentlyAuthenticated) return;
       isCurrentlyAuthenticated = true;
       consecutiveMatches = 0;
 
-      // Female Voice Security Agent: Personalized Welcome Message
-      const welcomeSpeech = `Access granted! Welcome, ${user.name}. Your biometric credentials and security clearance have been verified. Welcome to the QuantumCore security terminal.`;
-      agentSpeak(welcomeSpeech, "WELCOME", true);
-
-      // Show in-camera celebratory alert
-      const alertBox = document.getElementById('matchAlert');
-      document.getElementById('matchAlertTitle').innerText = `Identity Verified: ${user.name}!`;
-      alertBox.classList.remove('opacity-0', 'translate-y-8', 'pointer-events-none');
-
-      // Populate Security Terminal Data
+      // Populate Security Terminal Data immediately
       document.getElementById('secName').innerText = user.name;
       document.getElementById('secInitials').innerText = user.name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
       document.getElementById('secEmail').innerText = user.email;
@@ -1277,19 +1330,98 @@
       `;
       tbody.prepend(row);
 
-      // Transition smoothly after 900ms
-      setTimeout(() => {
-        alertBox.classList.add('opacity-0', 'translate-y-8', 'pointer-events-none');
-        document.getElementById('authPortalView').classList.add('hidden');
-        document.getElementById('securityPortalView').classList.remove('hidden');
-        lucide.createIcons();
-      }, 900);
+      // Show in-camera celebratory alert with match confirmation
+      const alertBox = document.getElementById('matchAlert');
+      const titleEl = document.getElementById('matchAlertTitle');
+      const subEl = document.getElementById('matchAlertSub');
+      const countdownHud = document.getElementById('countdownHud');
+
+      if (titleEl) titleEl.innerText = `IDENTITY VERIFIED: ${user.name.toUpperCase()}!`;
+      if (subEl) subEl.innerText = `Biometric Clearance: ${user.clearance} • Match ${(score * 100).toFixed(1)}%`;
+      if (countdownHud) countdownHud.classList.add('hidden');
+      alertBox.classList.remove('opacity-0', 'translate-y-8', 'pointer-events-none');
+
+      // Play victory chime
+      playSciFiChime('ACCESS_GRANTED');
+
+      // STEP 1: Agent EVA delivers full welcome address first without cutting off!
+      const welcomeSpeech = `Access granted! Welcome, ${user.name}. Your biometric credentials and security clearance have been verified. Welcome to the QuantumCore security terminal.`;
+      
+      agentSpeak(welcomeSpeech, "WELCOME", true, () => {
+        // STEP 2: Welcome finished! Now run the thrilling 3-2-1 countdown
+        startThrillCountdown(user);
+      });
+    }
+
+    function startThrillCountdown(user) {
+      const countdownHud = document.getElementById('countdownHud');
+      const countdownNumber = document.getElementById('countdownNumber');
+      const countdownLabel = document.getElementById('countdownLabel');
+      const alertBox = document.getElementById('matchAlert');
+
+      if (countdownHud) countdownHud.classList.remove('hidden');
+
+      // Part 2: Agent announces countdown
+      const countdownSpeech = `OK ${user.name}, transferring you to the dashboard in three... two... one... System unlocked.`;
+      agentSpeak(countdownSpeech, "COUNTDOWN", false);
+
+      let count = 3;
+      if (countdownNumber) {
+        countdownNumber.innerText = "3";
+        countdownNumber.className = "text-2xl font-black font-mono text-emerald-300 transition-all duration-200 scale-125";
+        setTimeout(() => { if (countdownNumber) countdownNumber.className = "text-2xl font-black font-mono text-emerald-300 transition-all duration-200 scale-100"; }, 250);
+      }
+      if (countdownLabel) countdownLabel.innerText = "TRANSFERRING IN 3 SECONDS...";
+      playSciFiChime('COUNTDOWN', 880);
+
+      const timer = setInterval(() => {
+        count--;
+        if (count === 2) {
+          if (countdownNumber) {
+            countdownNumber.innerText = "2";
+            countdownNumber.className = "text-2xl font-black font-mono text-cyan-300 transition-all duration-200 scale-125";
+            setTimeout(() => { if (countdownNumber) countdownNumber.className = "text-2xl font-black font-mono text-cyan-300 transition-all duration-200 scale-100"; }, 250);
+          }
+          if (countdownLabel) countdownLabel.innerText = "TRANSFERRING IN 2 SECONDS...";
+          playSciFiChime('COUNTDOWN', 1046);
+        } else if (count === 1) {
+          if (countdownNumber) {
+            countdownNumber.innerText = "1";
+            countdownNumber.className = "text-2xl font-black font-mono text-amber-300 transition-all duration-200 scale-125";
+            setTimeout(() => { if (countdownNumber) countdownNumber.className = "text-2xl font-black font-mono text-amber-300 transition-all duration-200 scale-100"; }, 250);
+          }
+          if (countdownLabel) countdownLabel.innerText = "TRANSFERRING IN 1 SECOND...";
+          playSciFiChime('COUNTDOWN', 1318);
+        } else if (count <= 0) {
+          clearInterval(timer);
+          if (countdownNumber) {
+            countdownNumber.innerText = "✓";
+            countdownNumber.className = "text-2xl font-black font-mono text-emerald-400 scale-150 transition-all duration-300";
+          }
+          if (countdownLabel) countdownLabel.innerText = "TERMINAL UNLOCKED • ACCESS GRANTED";
+          playSciFiChime('ACCESS_GRANTED');
+
+          // Smooth transition after thrilling countdown finishes!
+          setTimeout(() => {
+            alertBox.classList.add('opacity-0', 'translate-y-8', 'pointer-events-none');
+            document.getElementById('authPortalView').classList.add('hidden');
+            document.getElementById('securityPortalView').classList.remove('hidden');
+            lucide.createIcons();
+          }, 850);
+        }
+      }, 1000);
     }
 
     // Return / Lock Terminal Function
     window.lockAndReturn = function() {
       isCurrentlyAuthenticated = false;
       isWelcomeSpeaking = false;
+      const alertBox = document.getElementById('matchAlert');
+      if (alertBox) alertBox.classList.add('opacity-0', 'translate-y-8', 'pointer-events-none');
+      const hud = document.getElementById('countdownHud');
+      if (hud) hud.classList.add('hidden');
+      const countNum = document.getElementById('countdownNumber');
+      if (countNum) countNum.innerText = "3";
       document.getElementById('securityPortalView').classList.add('hidden');
       document.getElementById('authPortalView').classList.remove('hidden');
       switchMode('VERIFY');
