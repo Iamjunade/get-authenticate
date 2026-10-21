@@ -32,15 +32,15 @@ async function deriveRollingKey(sessionId: string, timestampMs: number): Promise
 
   const keyMaterial = await window.crypto.subtle.importKey(
     "raw",
-    masterKeyBytes,
+    masterKeyBytes as unknown as BufferSource,
     { name: "HKDF" },
     false,
     ["deriveKey"]
   );
 
   const encoder = new TextEncoder();
-  const salt = encoder.encode(sessionId);
-  const info = encoder.encode(windowIndex.toString());
+  const salt = encoder.encode(sessionId) as unknown as BufferSource;
+  const info = encoder.encode(windowIndex.toString()) as unknown as BufferSource;
 
   return await window.crypto.subtle.deriveKey(
     {
@@ -87,12 +87,12 @@ export async function encryptBiometricPayload(
   const encryptedBuffer = await window.crypto.subtle.encrypt(
     {
       name: "AES-GCM",
-      iv: iv,
-      additionalData: associatedData,
+      iv: iv as unknown as BufferSource,
+      additionalData: associatedData as unknown as BufferSource,
       tagLength: 128,
     },
     key,
-    rawData
+    rawData as unknown as BufferSource
   );
 
   const encryptedBytes = new Uint8Array(encryptedBuffer);
