@@ -1,8 +1,15 @@
 /**
- * Vercel Serverless Vector Store & Cosine Matcher
- * Uses Vercel KV (Upstash Redis) if available, with in-memory fallback.
- * Zero external servers required!
+ * AegisGuard™ Multi-Tier Cloud Biometric Vector Store
+ * Supports:
+ *  1. Neon Serverless Postgres (POSTGRES_URL or DATABASE_URL)
+ *  2. Vercel KV / Upstash Redis (KV_REST_API_URL or UPSTASH_REDIS_REST_URL)
+ *  3. Global Persistent Cloud Vault (REST Cloud Object for multi-device cross-laptop sync)
+ *  4. In-Memory Ephemeral Cache
+ * 
+ * Zero raw facial images are ever stored. Only mathematical 512-D vector embeddings.
  */
+
+import { neon } from '@neondatabase/serverless';
 
 export interface StoredBiometricProfile {
   id: string;
@@ -15,8 +22,13 @@ export interface StoredBiometricProfile {
   enrolledAt: string;
 }
 
-// In-memory fallback cache for serverless invocation
+// Global Cloud Vault Object ID for universal multi-device sync
+const GLOBAL_CLOUD_VAULT_ID = 'ff808181a09d98f701a15fa999a645f6';
+const GLOBAL_CLOUD_VAULT_API = `https://api.restful-api.dev/objects/${GLOBAL_CLOUD_VAULT_ID}`;
+
+// In-memory cache for ultra-fast sub-millisecond local reads
 let memoryVectorStore: StoredBiometricProfile[] = [];
+let neonTableInitialized = false;
 
 /**
  * Calculates Cosine Similarity between two numerical unit vectors
@@ -36,12 +48,67 @@ export function cosineSimilarity(a: number[], b: number[]): number {
 }
 
 /**
- * Fetches all registered biometric vector profiles
+ * Neon Postgres Initialization (Auto-creates table if needed)
+ */
+async function getNeonSql() {
+  const dbUrl = process.env.DATABASE_URL || process.env.POSTGRES_URL;
+  if (!dbUrl) return null;
+  
+  try {
+    const sql = neon(dbUrl);
+    if (!neonTableInitialized) {
+      await sql`
+        CREATE TABLE IF NOT EXISTS aegis_biometric_profiles (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          email TEXT,
+          department TEXT,
+          clearance TEXT,
+          vector JSONB NOT NULL,
+          vector_id TEXT,
+          enrolled_at TEXT
+        );
+      `;
+      neonTableInitialized = true;
+    }
+    return sql;
+  } catch (err) {
+    console.warn('[AegisGuard] Neon connection warning:', err);
+    return null;
+  }
+}
+
+/**
+ * Fetches all registered biometric vector profiles across cloud tiers
  */
 export async function getAllProfiles(): Promise<StoredBiometricProfile[]> {
-  // Check if Vercel KV is configured (auto-injected by Vercel Dashboard)
-  const kvUrl = process.env.KV_REST_API_URL;
-  const kvToken = process.env.KV_REST_API_TOKEN;
+  // Tier 1: Neon Postgres
+  const sql = await getNeonSql();
+  if (sql) {
+    try {
+      const rows = await sql`SELECT * FROM aegis_biometric_profiles ORDER BY enrolled_at DESC`;
+      if (rows && rows.length > 0) {
+        const neonProfiles: StoredBiometricProfile[] = rows.map((r: any) => ({
+          id: r.id,
+          name: r.name,
+          email: r.email || '',
+          department: r.department || '',
+          clearance: r.clearance || '',
+          vector: Array.isArray(r.vector) ? r.vector : JSON.parse(r.vector || '[]'),
+          vectorId: r.vector_id || r.id,
+          enrolledAt: r.enrolled_at || new Date().toISOString(),
+        }));
+        memoryVectorStore = neonProfiles;
+        return neonProfiles;
+      }
+    } catch (err) {
+      console.warn('[AegisGuard] Neon query fallback:', err);
+    }
+  }
+
+  // Tier 2: Vercel KV / Upstash Redis
+  const kvUrl = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
+  const kvToken = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
 
   if (kvUrl && kvToken) {
     try {
@@ -51,25 +118,79 @@ export async function getAllProfiles(): Promise<StoredBiometricProfile[]> {
       });
       const data = await res.json();
       if (data && data.result) {
-        return typeof data.result === 'string' ? JSON.parse(data.result) : data.result;
+        const kvProfiles: StoredBiometricProfile[] = typeof data.result === 'string' 
+          ? JSON.parse(data.result) 
+          : data.result;
+        memoryVectorStore = kvProfiles;
+        return kvProfiles;
       }
     } catch (err) {
-      console.warn("Vercel KV fetch error, using memory fallback:", err);
+      console.warn('[AegisGuard] Vercel KV fetch fallback:', err);
     }
   }
 
+  // Tier 3: Universal Cloud Vault (Cross-Laptop & Multi-Device Sync)
+  try {
+    const cloudRes = await fetch(GLOBAL_CLOUD_VAULT_API, {
+      cache: 'no-store',
+    });
+    if (cloudRes.ok) {
+      const cloudData = await cloudRes.json();
+      if (cloudData && cloudData.data && Array.isArray(cloudData.data.users)) {
+        const cloudProfiles: StoredBiometricProfile[] = cloudData.data.users;
+        // Merge with any in-memory profiles
+        const mergedMap = new Map<string, StoredBiometricProfile>();
+        cloudProfiles.forEach(p => mergedMap.set(p.id, p));
+        memoryVectorStore.forEach(p => mergedMap.set(p.id, p));
+        const combined = Array.from(mergedMap.values());
+        memoryVectorStore = combined;
+        return combined;
+      }
+    }
+  } catch (err) {
+    console.warn('[AegisGuard] Cloud Vault fetch fallback:', err);
+  }
+
+  // Tier 4: In-Memory Fallback
   return memoryVectorStore;
 }
 
 /**
- * Saves a new biometric profile into Vercel Storage
+ * Saves a new biometric profile into Cloud Storage
  */
 export async function saveProfile(profile: StoredBiometricProfile): Promise<void> {
-  const kvUrl = process.env.KV_REST_API_URL;
-  const kvToken = process.env.KV_REST_API_TOKEN;
-
   // Update in-memory
-  memoryVectorStore.push(profile);
+  const existingIdx = memoryVectorStore.findIndex(p => p.id === profile.id);
+  if (existingIdx >= 0) {
+    memoryVectorStore[existingIdx] = profile;
+  } else {
+    memoryVectorStore.push(profile);
+  }
+
+  // Tier 1: Neon Postgres
+  const sql = await getNeonSql();
+  if (sql) {
+    try {
+      await sql`
+        INSERT INTO aegis_biometric_profiles (id, name, email, department, clearance, vector, vector_id, enrolled_at)
+        VALUES (${profile.id}, ${profile.name}, ${profile.email}, ${profile.department}, ${profile.clearance}, ${JSON.stringify(profile.vector)}, ${profile.vectorId}, ${profile.enrolledAt})
+        ON CONFLICT (id) DO UPDATE SET
+          name = EXCLUDED.name,
+          email = EXCLUDED.email,
+          department = EXCLUDED.department,
+          clearance = EXCLUDED.clearance,
+          vector = EXCLUDED.vector,
+          vector_id = EXCLUDED.vector_id,
+          enrolled_at = EXCLUDED.enrolled_at;
+      `;
+    } catch (err) {
+      console.warn('[AegisGuard] Neon write error:', err);
+    }
+  }
+
+  // Tier 2: Vercel KV / Upstash Redis
+  const kvUrl = process.env.KV_REST_API_URL || process.env.UPSTASH_REDIS_REST_URL;
+  const kvToken = process.env.KV_REST_API_TOKEN || process.env.UPSTASH_REDIS_REST_TOKEN;
 
   if (kvUrl && kvToken) {
     try {
@@ -84,8 +205,24 @@ export async function saveProfile(profile: StoredBiometricProfile): Promise<void
         body: JSON.stringify(updated),
       });
     } catch (err) {
-      console.warn("Vercel KV write error:", err);
+      console.warn('[AegisGuard] Vercel KV write error:', err);
     }
+  }
+
+  // Tier 3: Universal Cloud Vault (Cross-Laptop Persistence)
+  try {
+    const all = await getAllProfiles();
+    const updatedUsers = [...all.filter(p => p.id !== profile.id), profile];
+    await fetch(GLOBAL_CLOUD_VAULT_API, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: 'AegisProfiles',
+        data: { users: updatedUsers, lastUpdated: new Date().toISOString() }
+      }),
+    });
+  } catch (err) {
+    console.warn('[AegisGuard] Cloud Vault write error:', err);
   }
 }
 
@@ -98,12 +235,12 @@ export async function matchVector1toN(
 ): Promise<{ bestMatch: StoredBiometricProfile | null; score: number }> {
   const profiles = await getAllProfiles();
   let bestMatch: StoredBiometricProfile | null = null;
-  let highestScore = -1;
+  let highestScore = 0;
 
   for (const profile of profiles) {
-    const score = cosineSimilarity(liveVector, profile.vector);
-    if (score > highestScore) {
-      highestScore = score;
+    const similarity = cosineSimilarity(liveVector, profile.vector);
+    if (similarity > highestScore) {
+      highestScore = similarity;
       bestMatch = profile;
     }
   }
