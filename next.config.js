@@ -20,6 +20,14 @@ const nextConfig = {
     }
     return config;
   },
+  async rewrites() {
+    return [
+      {
+        source: '/',
+        destination: '/demo.html',
+      },
+    ];
+  },
   async headers() {
     return [
       {
