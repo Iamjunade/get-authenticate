@@ -42,12 +42,10 @@ export function calculateBiometricSimilarity(v1: number[], v2: number[]): number
     const d = v1[i] - v2[i];
     sqSum += d * d;
   }
-  const dist = Math.sqrt(sqSum / v1.length);
-  // Strict Gaussian Calibration:
-  // Same Person: dist ~ 0.003 - 0.022 -> Confidence: 75% - 99%
-  // Different Person: dist ~ 0.080 - 0.350 -> Confidence: 0% - 6%
-  const confidence = Math.exp(-Math.pow(dist / 0.035, 2));
-  return Math.max(0, Math.min(1, confidence));
+  const rmse = Math.sqrt(sqSum / v1.length);
+  const normDist = rmse / 0.035;
+  const conf = Math.max(0, Math.min(100, Math.round(100 / (1 + Math.pow(normDist, 3.5)))));
+  return conf / 100;
 }
 
 /**
@@ -254,7 +252,7 @@ export async function saveProfile(profile: StoredBiometricProfile): Promise<void
  */
 export async function matchVector1toN(
   liveVector: number[],
-  threshold = 0.70
+  threshold = 0.60
 ): Promise<{ bestMatch: StoredBiometricProfile | null; score: number }> {
   const profiles = await getAllProfiles();
   let bestMatch: StoredBiometricProfile | null = null;

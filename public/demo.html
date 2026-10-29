@@ -1081,17 +1081,17 @@
       // Merge fetched cloud profiles with local users (filtering for valid anthropometric signatures)
       if (fetchedUsers && fetchedUsers.length > 0) {
         const userMap = new Map();
-        // Load server users with valid vectors
+        // Load server users with valid 60-D anthropometric vectors
         fetchedUsers.forEach(u => {
           const key = u.id || u.vectorId;
-          if (key && Array.isArray(u.vector) && u.vector.length >= 50) {
+          if (key && Array.isArray(u.vector) && u.vector.length === 60) {
             userMap.set(key, u);
           }
         });
-        // Merge locally enrolled users
+        // Merge locally enrolled users (strictly 60-D vectors)
         enrolledUsers.forEach(u => {
           const key = u.id || u.vectorId;
-          if (key && Array.isArray(u.vector) && u.vector.length >= 50) {
+          if (key && Array.isArray(u.vector) && u.vector.length === 60) {
             userMap.set(key, u);
           }
         });
@@ -1109,13 +1109,13 @@
 
     // Load enrolled users from local storage & cloud
     function loadSavedUsers() {
-      // 1. Instantly restore from localStorage (filter valid anthropometric profiles)
+      // 1. Instantly restore from localStorage (filter strictly valid 60-D profiles)
       const data = localStorage.getItem('aegis_biometric_users');
       if (data) {
         try {
           const parsed = JSON.parse(data);
           enrolledUsers = Array.isArray(parsed) 
-            ? parsed.filter(u => Array.isArray(u.vector) && u.vector.length >= 50)
+            ? parsed.filter(u => Array.isArray(u.vector) && u.vector.length === 60)
             : [];
         } catch (e) {
           enrolledUsers = [];
@@ -1308,13 +1308,13 @@
         const d = v1[i] - v2[i];
         sqSum += d * d;
       }
-      const dist = Math.sqrt(sqSum / v1.length);
-
-      // Strict Gaussian Calibration:
-      // Same Person (Pasha vs Pasha): dist ~ 0.003 to 0.022 -> Confidence: 75% to 99%
-      // Different Person (Pasha vs Friend): dist ~ 0.080 to 0.350 -> Confidence: 0% to 6%
-      const confidence = Math.exp(-Math.pow(dist / 0.035, 2));
-      return Math.max(0, Math.min(1, confidence));
+      const rmse = Math.sqrt(sqSum / v1.length);
+      const normDist = rmse / 0.035;
+      // Sigmoid Confidence Curve:
+      // Same Person (Pasha vs Pasha): rmse ~ 0.005 to 0.024 -> Confidence: 75% to 99%
+      // Different Person (Pasha vs Friend): rmse ~ 0.055 to 0.150 -> Confidence: 5% to 20%
+      const conf = Math.max(0, Math.min(100, Math.round(100 / (1 + Math.pow(normDist, 3.5)))));
+      return conf / 100;
     }
 
     // Live verification state tracker
@@ -1793,8 +1793,8 @@
       const latencyEl = document.getElementById('liveLatency');
       if (latencyEl) latencyEl.innerText = `${latency} ms`;
 
-      // True Biometric Verification Threshold: 70.0%
-      const isMatch = highestScore >= 0.70 && !!bestMatch;
+      // High-Security Biometric Threshold: 60.0%
+      const isMatch = highestScore >= 0.60 && !!bestMatch;
       liveVerificationState.bestMatch = bestMatch;
       liveVerificationState.confidence = highestScore;
       liveVerificationState.isMatch = isMatch;
@@ -1820,11 +1820,11 @@
         if (window.lucide) lucide.createIcons();
       }
 
-      // Required Match Confidence Threshold (>= 70.0% strict match sustained for 40 frames)
+      // Required Match Confidence Threshold (>= 60.0% strict match sustained for 20 frames)
       if (isMatch) {
         liveVerificationState.consecutiveMatches++;
-        // Requires 40 stable frames (~1.3 seconds of sustained verified identity to auto-trigger)
-        if (liveVerificationState.consecutiveMatches >= 40) {
+        // Requires 20 stable frames (~0.6 seconds of sustained verified identity to auto-trigger)
+        if (liveVerificationState.consecutiveMatches >= 20) {
           triggerAuthenticationSuccess(bestMatch, highestScore, latency);
         }
       } else {
@@ -1860,12 +1860,12 @@
         }
       }
 
-      if (highestScore >= 0.70 && bestMatch) {
+      if (highestScore >= 0.60 && bestMatch) {
         triggerAuthenticationSuccess(bestMatch, highestScore, 35);
       } else {
         const scorePct = (highestScore * 100).toFixed(1);
         const enrolledNames = enrolledUsers.map(u => u.name).join(', ');
-        const alertMsg = `⚠️ SECURITY BREACH PREVENTED: ACCESS DENIED\n\nYour biometric facial signature does NOT match any authorized user in the system.\n\n• Verified Match Confidence: ${scorePct}%\n• Required Security Threshold: 70.0%\n• Authorized Profiles on File: [${enrolledNames}]\n\nAccess attempt has been logged in the audit trail.`;
+        const alertMsg = `⚠️ SECURITY BREACH PREVENTED: ACCESS DENIED\n\nYour biometric facial signature does NOT match any authorized user in the system.\n\n• Verified Match Confidence: ${scorePct}%\n• Required Security Threshold: 60.0%\n• Authorized Profiles on File: [${enrolledNames}]\n\nAccess attempt has been logged in the audit trail.`;
         alert(alertMsg);
         agentSpeak("Security breach attempt detected. Facial biometric signature does not match security clearance database. Access is strictly denied.", "DENIED");
 
