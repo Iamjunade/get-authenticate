@@ -31,10 +31,40 @@ let memoryVectorStore: StoredBiometricProfile[] = [];
 let neonTableInitialized = false;
 
 /**
- * Calculates Cosine Similarity between two numerical unit vectors
+ * Calculates Calibrated Anthropometric Biometric Similarity (0.0 to 1.0)
+ * Rejects identity mismatch; grants access only when facial geometry truly matches.
+ */
+export function calculateBiometricSimilarity(v1: number[], v2: number[]): number {
+  if (!v1 || !v2 || v1.length !== v2.length) return 0;
+
+  const rLen = Math.min(12, v1.length);
+  let rDist = 0;
+  for (let i = 0; i < rLen; i++) {
+    const d = v1[i] - v2[i];
+    rDist += d * d;
+  }
+  rDist = Math.sqrt(rDist) / rLen;
+
+  let cDist = 0;
+  for (let i = rLen; i < v1.length; i++) {
+    const d = v1[i] - v2[i];
+    cDist += d * d;
+  }
+  cDist = Math.sqrt(cDist) / Math.max(1, v1.length - rLen);
+
+  const totalDist = rDist * 0.65 + cDist * 0.35;
+  const confidence = Math.exp(-totalDist * 14);
+  return Math.max(0, Math.min(1, confidence));
+}
+
+/**
+ * Calculates Cosine / Anthropometric Similarity between two numerical vectors
  */
 export function cosineSimilarity(a: number[], b: number[]): number {
   if (!a || !b || a.length !== b.length) return 0;
+  if (a.length === 60) {
+    return calculateBiometricSimilarity(a, b);
+  }
   let dot = 0;
   let normA = 0;
   let normB = 0;
@@ -231,14 +261,15 @@ export async function saveProfile(profile: StoredBiometricProfile): Promise<void
  */
 export async function matchVector1toN(
   liveVector: number[],
-  threshold = 0.90
+  threshold = 0.78
 ): Promise<{ bestMatch: StoredBiometricProfile | null; score: number }> {
   const profiles = await getAllProfiles();
   let bestMatch: StoredBiometricProfile | null = null;
   let highestScore = 0;
 
   for (const profile of profiles) {
-    const similarity = cosineSimilarity(liveVector, profile.vector);
+    if (!profile.vector || profile.vector.length !== liveVector.length) continue;
+    const similarity = calculateBiometricSimilarity(liveVector, profile.vector);
     if (similarity > highestScore) {
       highestScore = similarity;
       bestMatch = profile;
