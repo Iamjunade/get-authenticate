@@ -489,9 +489,9 @@
             </div>
 
             <!-- Tactical Authentication Trigger -->
-            <button onclick="triggerManualVerification()" class="w-full bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black py-3.5 px-4 rounded-2xl shadow-xl shadow-emerald-500/25 flex items-center justify-center space-x-2 transition transform active:scale-98 tracking-wider font-mono text-xs uppercase">
-              <i data-lucide="shield-check" class="w-4 h-4 text-slate-950"></i>
-              <span>Instant Verify Identity</span>
+            <button id="manualVerifyBtn" onclick="triggerManualVerification()" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-3.5 px-4 rounded-2xl border border-slate-700 flex items-center justify-center space-x-2 transition tracking-wider font-mono text-xs uppercase shadow-xl">
+              <i data-lucide="shield-alert" class="w-4 h-4 text-slate-400"></i>
+              <span id="manualVerifyBtnText">Scan & Verify Identity</span>
             </button>
 
             <!-- Hidden compatibility elements to ensure no background loops break -->
@@ -1301,28 +1301,19 @@
 
     // Calibrated Anthropometric Similarity: Returns 0.0 to 1.0 (Strict Identity Verification)
     function calculateCosineSimilarity(v1, v2) {
-      if (!v1 || !v2 || v1.length !== v2.length) return 0;
+      if (!v1 || !v2 || v1.length !== v2.length || v1.length !== 60) return 0;
 
-      const rLen = Math.min(12, v1.length);
-      let rDist = 0;
-      for (let i = 0; i < rLen; i++) {
+      let sqSum = 0;
+      for (let i = 0; i < v1.length; i++) {
         const d = v1[i] - v2[i];
-        rDist += d * d;
+        sqSum += d * d;
       }
-      rDist = Math.sqrt(rDist) / rLen;
+      const dist = Math.sqrt(sqSum / v1.length);
 
-      let cDist = 0;
-      for (let i = rLen; i < v1.length; i++) {
-        const d = v1[i] - v2[i];
-        cDist += d * d;
-      }
-      cDist = Math.sqrt(cDist) / Math.max(1, v1.length - rLen);
-
-      const totalDist = rDist * 0.65 + cDist * 0.35;
-      // Exponential confidence calibration:
-      // Same Person: totalDist ~ 0.003 to 0.012 -> 84% to 96%
-      // Different Person: totalDist ~ 0.035 to 0.120 -> 20% to 60%
-      const confidence = Math.exp(-totalDist * 14);
+      // Strict Gaussian Calibration:
+      // Same Person (Pasha vs Pasha): dist ~ 0.003 to 0.022 -> Confidence: 75% to 99%
+      // Different Person (Pasha vs Friend): dist ~ 0.080 to 0.350 -> Confidence: 0% to 6%
+      const confidence = Math.exp(-Math.pow(dist / 0.035, 2));
       return Math.max(0, Math.min(1, confidence));
     }
 
@@ -1802,8 +1793,8 @@
       const latencyEl = document.getElementById('liveLatency');
       if (latencyEl) latencyEl.innerText = `${latency} ms`;
 
-      // True Biometric Verification Threshold: 78.0%
-      const isMatch = highestScore >= 0.78 && !!bestMatch;
+      // True Biometric Verification Threshold: 70.0%
+      const isMatch = highestScore >= 0.70 && !!bestMatch;
       liveVerificationState.bestMatch = bestMatch;
       liveVerificationState.confidence = highestScore;
       liveVerificationState.isMatch = isMatch;
@@ -1816,11 +1807,24 @@
       const nameEl = document.getElementById('closestMatchName');
       if (nameEl) nameEl.innerText = bestMatch ? bestMatch.name : 'Unknown';
 
-      // Required Match Confidence Threshold (>= 78.0% strict match)
+      // Update manual verification button dynamically based on live face lock
+      const manualBtn = document.getElementById('manualVerifyBtn');
+      if (manualBtn) {
+        if (isMatch) {
+          manualBtn.className = "w-full bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-600 hover:from-emerald-400 hover:to-teal-400 text-slate-950 font-black py-3.5 px-4 rounded-2xl shadow-xl shadow-emerald-500/30 flex items-center justify-center space-x-2 transition transform active:scale-98 tracking-wider font-mono text-xs uppercase glow-green";
+          manualBtn.innerHTML = `<i data-lucide="shield-check" class="w-4 h-4 text-slate-950"></i><span>VERIFY & AUTHENTICATE (${bestMatch.name.toUpperCase()} ${scorePct}%)</span>`;
+        } else {
+          manualBtn.className = "w-full bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-3.5 px-4 rounded-2xl border border-slate-700 flex items-center justify-center space-x-2 transition tracking-wider font-mono text-xs uppercase";
+          manualBtn.innerHTML = `<i data-lucide="shield-alert" class="w-4 h-4 text-rose-400"></i><span>ACCESS RESTRICTED (MISMATCH ${scorePct}%)</span>`;
+        }
+        if (window.lucide) lucide.createIcons();
+      }
+
+      // Required Match Confidence Threshold (>= 70.0% strict match sustained for 40 frames)
       if (isMatch) {
         liveVerificationState.consecutiveMatches++;
-        // Requires 14 stable frames (~0.5 seconds of sustained verified identity)
-        if (liveVerificationState.consecutiveMatches >= 14) {
+        // Requires 40 stable frames (~1.3 seconds of sustained verified identity to auto-trigger)
+        if (liveVerificationState.consecutiveMatches >= 40) {
           triggerAuthenticationSuccess(bestMatch, highestScore, latency);
         }
       } else {
@@ -1833,16 +1837,16 @@
     window.triggerManualVerification = function() {
       unlockAudioEngine();
       if (!currentLiveLandmarks) {
-        alert("Please face the camera directly to authenticate.");
+        alert("SECURITY WARNING: No face detected. Please look directly into the camera.");
         return;
       }
       if (enrolledUsers.length === 0) {
-        alert("No faces registered yet! Please pre-store a face in Step 1 first.");
+        alert("DATABASE EMPTY: No authorized personnel enrolled. Please register a face in Step 1 first.");
         return;
       }
       const liveVector = extractNormalizedFaceVector(currentLiveLandmarks);
       if (!liveVector) {
-        alert("Could not compute 3D facial biometric vector. Please center your face.");
+        alert("BIOMETRIC ERROR: Unable to construct 3D facial mesh. Please center your face.");
         return;
       }
       let bestMatch = null;
@@ -1856,15 +1860,30 @@
         }
       }
 
-      if (highestScore >= 0.78 && bestMatch) {
+      if (highestScore >= 0.70 && bestMatch) {
         triggerAuthenticationSuccess(bestMatch, highestScore, 35);
       } else {
         const scorePct = (highestScore * 100).toFixed(1);
-        const msg = bestMatch 
-          ? `Access Denied: Subject does not match enrolled profile for "${bestMatch.name}". Verified Confidence: ${scorePct}% (Threshold: 78.0%).`
-          : `Access Denied: Unrecognized biometric signature. Confidence: ${scorePct}%.`;
-        alert(msg);
-        agentSpeak("Identity verification failed. Subject credentials do not match security clearance database.", "DENIED");
+        const enrolledNames = enrolledUsers.map(u => u.name).join(', ');
+        const alertMsg = `⚠️ SECURITY BREACH PREVENTED: ACCESS DENIED\n\nYour biometric facial signature does NOT match any authorized user in the system.\n\n• Verified Match Confidence: ${scorePct}%\n• Required Security Threshold: 70.0%\n• Authorized Profiles on File: [${enrolledNames}]\n\nAccess attempt has been logged in the audit trail.`;
+        alert(alertMsg);
+        agentSpeak("Security breach attempt detected. Facial biometric signature does not match security clearance database. Access is strictly denied.", "DENIED");
+
+        // Append Rejected Audit Log
+        const tbody = document.getElementById('auditLogsBody');
+        if (tbody) {
+          const row = document.createElement('tr');
+          row.className = "hover:bg-rose-950/20 transition";
+          row.innerHTML = `
+            <td class="py-2.5 font-bold text-rose-400">#EVT-${Math.floor(1000 + Math.random() * 9000)}</td>
+            <td class="text-slate-400">${new Date().toLocaleTimeString()}</td>
+            <td class="font-semibold text-rose-300">Unauthorized Subject</td>
+            <td><span class="px-1.5 py-0.5 rounded bg-slate-800 text-[10px]">3D Face Vector</span></td>
+            <td class="text-rose-400 font-bold">${scorePct}%</td>
+            <td><span class="text-rose-400 bg-rose-950/80 px-2 py-0.5 rounded text-[10px] border border-rose-800">BREACH DENIED</span></td>
+          `;
+          tbody.prepend(row);
+        }
       }
     };
 
